@@ -582,6 +582,15 @@ in
       '';
     };
 
+    virtiofsd.group = mkOption {
+      type = with types; nullOr str;
+      default = "kvm";
+      description = ''
+        The name of the group that will own the Unix domain socket file that virtiofsd creates for communication with the hypervisor.
+        If null, the socket will have group ownership of the user running the hypervisor.
+      '';
+    };
+
     virtiofsd.extraArgs = mkOption {
       type = with types; listOf str;
       default = [];
