@@ -1,11 +1,12 @@
 { pkgs
 , microvmConfig
 , macvtapFds
+, extractOptValues
+, ...
 }:
 
 let
   inherit (pkgs) lib;
-  inherit (import ../. { inherit (pkgs) lib; }) extractOptValues;
   inherit (microvmConfig) vcpu mem balloon initialBalloonMem deflateOnOOM hotplugMem hotpluggedMem user interfaces volumes shares socket devices hugepageMem graphics storeDisk storeOnDisk kernel initrdPath;
   inherit (microvmConfig.cloud-hypervisor) platformOEMStrings extraArgs;
 
@@ -94,10 +95,11 @@ let
 
   supportsNotifySocket = true;
 
-  oemStringValues = (lib.optionals supportsNotifySocket ["io.systemd.credential:vmm.notify_socket=vsock-stream:2:8888"]) ++ platformOEMStrings;
-  oemStringOptions = lib.optionals  (oemStringValues != [])  ["oem_strings=[${lib.concatStringsSep "," oemStringValues}]"];
-  extraArgsWithoutPlatform = (extractOptValues "--platform" extraArgs).args;
-  userPlatformOpts = (extractOptValues "--platform" extraArgs).values;
+  oemStringValues = platformOEMStrings ++ lib.optional supportsNotifySocket "io.systemd.credential:vmm.notify_socket=vsock-stream:2:8888";
+  oemStringOptions = lib.optional (oemStringValues != []) "oem_strings=[${lib.concatStringsSep "," oemStringValues}]";
+  platformExtracted = extractOptValues "--platform" extraArgs;
+  extraArgsWithoutPlatform = platformExtracted.args;
+  userPlatformOpts = platformExtracted.values;
   platformOps = lib.concatStringsSep "," (oemStringOptions ++ userPlatformOpts);
 in {
   inherit tapMultiQueue;

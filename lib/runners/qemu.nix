@@ -2,6 +2,7 @@
 , microvmConfig
 , macvtapFds
 , withDriveLetters
+, ...
 }:
 
 let

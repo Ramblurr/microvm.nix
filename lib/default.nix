@@ -107,7 +107,7 @@ rec {
       => { values = ["linux"]; args = ["-vnc" ":0" "-usb"]; }
 
       # Extract multiple occurrences:
-      extractOptValues "-platform" ["-a" "a" "-b" "b" "-c" "c" "-b" "b2"]
+      extractOptValues "-b" ["-a" "a" "-b" "b" "-c" "c" "-b" "b2"]
       => { values = ["b" "b2"]; args = ["-b" "b" "-c" "c"]; }
 
       # Extract with multiple flag aliases:
