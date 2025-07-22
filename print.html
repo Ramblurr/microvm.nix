@@ -656,6 +656,16 @@ null or string</p>
 <ul>
 <li><a href="https://github.com/microvm-nix/microvm.nix/tree/main/nixos-modules/microvm/options.nix">microvm.nix/nixos-modules/microvm/options.nix</a></li>
 </ul>
+<h2 id="microvmfirecrackercpu"><a class="header" href="#microvmfirecrackercpu">microvm.firecracker.cpu</a></h2>
+<p>Custom CPU template passed to firecracker.</p>
+<p><em>Type:</em>
+null or (attribute set)</p>
+<p><em>Default:</em>
+<code>null</code></p>
+<p><em>Declared by:</em></p>
+<ul>
+<li><a href="https://github.com/microvm-nix/microvm.nix/tree/main/nixos-modules/microvm/options.nix">microvm.nix/nixos-modules/microvm/options.nix</a></li>
+</ul>
 <h2 id="microvmforwardports"><a class="header" href="#microvmforwardports">microvm.forwardPorts</a></h2>
 <p>When using the SLiRP user networking (default), this option allows to
 forward ports to/from the host/guest.</p>
@@ -1189,6 +1199,17 @@ positive integer, meaning &gt;0</p>
 list of string</p>
 <p><em>Default:</em>
 <code>[ ]</code></p>
+<p><em>Declared by:</em></p>
+<ul>
+<li><a href="https://github.com/microvm-nix/microvm.nix/tree/main/nixos-modules/microvm/options.nix">microvm.nix/nixos-modules/microvm/options.nix</a></li>
+</ul>
+<h2 id="microvmvirtiofsdgroup"><a class="header" href="#microvmvirtiofsdgroup">microvm.virtiofsd.group</a></h2>
+<p>The name of the group that will own the Unix domain socket file that virtiofsd creates for communication with the hypervisor.
+If null, the socket will have group ownership of the user running the hypervisor.</p>
+<p><em>Type:</em>
+null or string</p>
+<p><em>Default:</em>
+<code>"kvm"</code></p>
 <p><em>Declared by:</em></p>
 <ul>
 <li><a href="https://github.com/microvm-nix/microvm.nix/tree/main/nixos-modules/microvm/options.nix">microvm.nix/nixos-modules/microvm/options.nix</a></li>
@@ -1796,6 +1817,16 @@ list of string</p>
 boolean</p>
 <p><em>Default:</em>
 <code>true</code></p>
+<p><em>Declared by:</em></p>
+<ul>
+<li><a href="https://github.com/microvm-nix/microvm.nix/tree/main/nixos-modules/host/options.nix">microvm.nix/nixos-modules/host/options.nix</a></li>
+</ul>
+<h2 id="microvmhoststartuptimeout"><a class="header" href="#microvmhoststartuptimeout">microvm.host.startupTimeout</a></h2>
+<p>Start up timeout for the VMs in seconds</p>
+<p><em>Type:</em>
+positive integer, meaning &gt;0</p>
+<p><em>Default:</em>
+<code>150</code></p>
 <p><em>Declared by:</em></p>
 <ul>
 <li><a href="https://github.com/microvm-nix/microvm.nix/tree/main/nixos-modules/host/options.nix">microvm.nix/nixos-modules/host/options.nix</a></li>
