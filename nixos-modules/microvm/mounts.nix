@@ -126,6 +126,8 @@ lib.mkIf config.microvm.guest.enable {
         }.${proto};
       } // lib.optionalAttrs (source == "/nix/store" || mountPoint == config.microvm.writableStoreOverlay) {
         neededForBoot = true;
+      } // lib.optionalAttrs (mountPoint == "/run/microvm-credentials-source") {
+        neededForBoot = true;
       };
     }) {} config.microvm.shares
   ) ];

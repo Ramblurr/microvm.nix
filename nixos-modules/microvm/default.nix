@@ -13,6 +13,7 @@ in
     ./store-disk.nix
     ./options.nix
     ./asserts.nix
+    ./credentials.nix
     ./system.nix
     ./mounts.nix
     ./interfaces.nix

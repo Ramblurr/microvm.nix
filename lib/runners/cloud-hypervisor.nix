@@ -177,8 +177,6 @@ in {
   command =
     if user != null
     then throw "cloud-hypervisor will not change user"
-    else if credentialFiles != {}
-    then throw "cloud-hypervisor does not support credentialFiles"
     else lib.escapeShellArgs (
       [
         "${cloudhypervisorPkg}/bin/cloud-hypervisor"

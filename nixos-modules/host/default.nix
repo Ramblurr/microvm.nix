@@ -81,6 +81,7 @@ in
           "microvm-tap-interfaces@${name}.service"
           "microvm-macvtap-interfaces@${name}.service"
           "microvm-pci-devices@${name}.service"
+          "microvm-credentials@${name}.service"
           "microvm-virtiofsd@${name}.service"
           "microvm-set-booted@${name}.service"
         ];
@@ -143,6 +144,11 @@ in
         path = lib.mkForce [];
         overrideStrategy = "asDropin";
       };
+      "microvm-credentials@${name}" = {
+        serviceConfig.X-RestartIfChanged = [ "" microvmConfig.restartIfChanged ];
+        path = lib.mkForce [];
+        overrideStrategy = "asDropin";
+      };
       "microvm-virtiofsd@${name}" = {
         serviceConfig.X-RestartIfChanged = [ "" microvmConfig.restartIfChanged ];
         path = lib.mkForce [];
@@ -196,6 +202,69 @@ in
         };
       };
 
+      "microvm-credentials@" = {
+        description = "Stage credentials for MicroVM '%i'";
+        before = [ "microvm-virtiofsd@%i.service" "microvm@%i.service" ];
+        after = [ "microvm-set-booted@%i.service" ];
+        partOf = [ "microvm@%i.service" ];
+        restartIfChanged = false;
+        serviceConfig = {
+          Type = "oneshot";
+          SyslogIdentifier = "microvm-credentials@%i";
+          WorkingDirectory = "${stateDir}/%i";
+        };
+        script = ''
+          set -euo pipefail
+
+          metadata_file="${stateDir}/%i/current/share/microvm/credentials/initrd-share"
+          staging_dir="${stateDir}/%i/.credentials.tmp"
+          target_dir="${stateDir}/%i/credentials"
+
+          cleanup() {
+            ${lib.getExe' pkgs.coreutils "rm"} -rf "$staging_dir"
+          }
+          trap cleanup EXIT
+
+          ${lib.getExe' pkgs.coreutils "rm"} -rf "$staging_dir"
+
+          if [ ! -f "$metadata_file" ]; then
+            ${lib.getExe' pkgs.coreutils "rm"} -rf "$target_dir"
+            exit 0
+          fi
+
+          ${lib.getExe' pkgs.coreutils "mkdir"} -m 0700 -p "$staging_dir"
+
+          while IFS=$'\t' read -r credential_name source_path; do
+            if [ -z "$credential_name" ]; then
+              continue
+            fi
+
+            if [ -z "$source_path" ]; then
+              echo "Credential metadata entry for '$credential_name' has an empty source path" >&2
+              exit 1
+            fi
+
+            if [ -L "$source_path" ]; then
+              echo "Credential source '$source_path' must not be a symlink" >&2
+              exit 1
+            fi
+
+            if [ ! -f "$source_path" ]; then
+              echo "Credential source '$source_path' does not exist for '$credential_name'" >&2
+              exit 1
+            fi
+
+            ${lib.getExe' pkgs.coreutils "install"} -m 0400 "$source_path" "$staging_dir/$credential_name"
+          done < "$metadata_file"
+
+          ${lib.getExe' pkgs.coreutils "chown"} -R ${user}:${group} "$staging_dir"
+          ${lib.getExe' pkgs.coreutils "chmod"} 0700 "$staging_dir"
+          ${lib.getExe' pkgs.coreutils "mv"} -Tf "$staging_dir" "$target_dir"
+
+          trap - EXIT
+        '';
+      };
+
       "microvm-virtiofsd@" = {
           description = "VirtioFS daemons for MicroVM '%i'";
           before = [ "microvm@%i.service" ];
@@ -243,6 +312,7 @@ in
           "microvm-tap-interfaces@%i.service"
           "microvm-macvtap-interfaces@%i.service"
           "microvm-pci-devices@%i.service"
+          "microvm-credentials@%i.service"
           "microvm-virtiofsd@%i.service"
           "microvm-set-booted@%i.service"
         ];
@@ -252,6 +322,7 @@ in
           "microvm-tap-interfaces@%i.service"
           "microvm-macvtap-interfaces@%i.service"
           "microvm-pci-devices@%i.service"
+          "microvm-credentials@%i.service"
           "microvm-virtiofsd@%i.service"
           "microvm-set-booted@%i.service"
         ];

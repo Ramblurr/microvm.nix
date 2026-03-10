@@ -29,6 +29,13 @@ let
   # TAP interface names for machined registration
   tapInterfaces = lib.filter (i: i.type == "tap" && i ? id) microvmConfig.interfaces;
   tapInterfaceNames = map (i: i.id) tapInterfaces;
+  credentialMappingsInitrdShare =
+    if microvmConfig.credentials.resolvedTransport == "initrd-share"
+    then lib.mapAttrsToList (name: path: "${name}\t${toString path}") microvmConfig.credentialFiles
+    else [];
+  credentialMappingsInitrdShareFile = vmHostPackages.writeText "microvm-${hostName}-credentials-initrd-share" (
+    lib.concatStringsSep "\n" credentialMappingsInitrdShare + "\n"
+  );
 
   # Generate machine UUID at eval time for consistency across SMBIOS and machined
   # Uses provided machineId or generates UUIDv5 from hostname
@@ -174,6 +181,39 @@ let
         ${preStart}
         ${createVolumesScript microvmConfig.volumes}
         ${lib.optionalString (hypervisorConfig.requiresMacvtapAsFds or false) openMacvtapFds}
+
+        credentials_metadata_file="$(dirname "$0")/../share/microvm/credentials/initrd-share"
+        staged_credentials_dir="./credentials"
+        if [ -f "$credentials_metadata_file" ]; then
+          staging_dir="./.credentials.runtime.tmp"
+          ${vmHostPackages.coreutils}/bin/rm -rf "$staging_dir"
+          ${vmHostPackages.coreutils}/bin/mkdir -m 0700 -p "$staging_dir"
+
+          while IFS=$'\t' read -r credential_name source_path; do
+            [ -n "$credential_name" ] || continue
+
+            if [ -z "$source_path" ]; then
+              echo "Credential metadata entry for '$credential_name' has an empty source path" >&2
+              exit 1
+            fi
+
+            if [ -L "$source_path" ]; then
+              echo "Credential source '$source_path' must not be a symlink" >&2
+              exit 1
+            fi
+
+            if [ ! -f "$source_path" ]; then
+              echo "Credential source '$source_path' does not exist for '$credential_name'" >&2
+              exit 1
+            fi
+
+            ${vmHostPackages.coreutils}/bin/install -m 0400 "$source_path" "$staging_dir/$credential_name"
+          done < "$credentials_metadata_file"
+
+          ${vmHostPackages.coreutils}/bin/chmod 0700 "$staging_dir"
+          ${vmHostPackages.coreutils}/bin/mv -Tf "$staging_dir" "$staged_credentials_dir"
+        fi
+
         runtime_args=${
           lib.optionalString (microvmConfig.extraArgsScript != null) ''
             $(${microvmConfig.extraArgsScript})
@@ -265,6 +305,11 @@ vmHostPackages.buildPackages.runCommand "microvm-${microvmConfig.hypervisor}-${h
   ${lib.concatMapStrings ({ bus, path, ... }: ''
     echo "${path}" >> $out/share/microvm/${bus}-devices
   '') microvmConfig.devices}
+
+  ${lib.optionalString (credentialMappingsInitrdShare != []) ''
+    mkdir -p $out/share/microvm/credentials
+    cp ${credentialMappingsInitrdShareFile} $out/share/microvm/credentials/initrd-share
+  ''}
 
   # VSOCK info for ssh access
   ${lib.optionalString (microvmConfig.vsock.cid != null) ''

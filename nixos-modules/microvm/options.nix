@@ -7,6 +7,13 @@ let
   cfg = config.microvm;
   hostName = config.networking.hostName or "$HOSTNAME";
   kernelAtLeast = lib.versionAtLeast config.boot.kernelPackages.kernel.version;
+  credentialFilesConfigured = cfg.credentialFiles != {};
+  resolvedCredentialTransport =
+    if !credentialFilesConfigured
+    then null
+    else if cfg.hypervisor == "qemu"
+    then "qemu-fw_cfg"
+    else "initrd-share";
 in
 {
   options.microvm = with lib; {
@@ -1033,12 +1040,27 @@ in
       type = with types; attrsOf path;
       default = {};
       description = ''
-        Key-value pairs of credential files that will be loaded into the vm using systemd's io.systemd.credential feature.
+        Key-value pairs of credential files loaded into the VM through systemd credentials.
+
+        Transport behavior:
+        - qemu uses `qemu-fw_cfg`
+        - other hypervisors use `initrd-share` and import from `/run/credentials/@initrd/`
+
+        The `initrd-share` transport requires `boot.initrd.systemd.enable = true`.
       '';
       example = literalExpression /* nix */ ''
         {
           SOPS_AGE_KEY = "/run/secrets/guest_microvm_age_key";
         }
+      '';
+    };
+
+    credentials.resolvedTransport = mkOption {
+      type = with types; nullOr (enum [ "qemu-fw_cfg" "initrd-share" ]);
+      readOnly = true;
+      visible = false;
+      description = ''
+        Internal resolved credential transport used by runners and modules.
       '';
     };
   };
@@ -1057,5 +1079,7 @@ in
       lib.mkIf (pkgs.stdenv.hostPlatform.system == "aarch64-linux") (
         lib.mkDefault "virt"
       );
+  } {
+    microvm.credentials.resolvedTransport = resolvedCredentialTransport;
   } ];
 }

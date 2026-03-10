@@ -21,6 +21,14 @@ available for customization. These are the most important ones:
 | `microvm.kernelParams`         | Like `boot.kernelParams` but will not end up in `system.build.toplevel`, saving you rebuilds        |
 | `microvm.storeOnDisk`          | Enables the store on the boot squashfs even in the presence of a share with the host's `/nix/store` |
 | `microvm.writableStoreOverlay` | Optional string of the path where all writes to `/nix/store` should go to.                          |
+| `microvm.credentialFiles`      | Credential file mapping consumed by systemd `ImportCredential=` / `LoadCredential=`                  |
+
+Credential transport notes:
+
+- `qemu` uses `fw_cfg` by default.
+- other hypervisors use `initrd-share`, copying credentials through an internal share and importing them from `/run/credentials/@initrd/`.
+- `initrd-share` requires `boot.initrd.systemd.enable = true`.
+- Source credential files must exist at VM start and must not be symlinks; staging fails fast with a clear error when a source is missing or invalid.
 
 See [the options declarations](
 https://github.com/microvm-nix/microvm.nix/blob/main/nixos-modules/microvm/options.nix)

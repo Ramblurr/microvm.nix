@@ -1,6 +1,18 @@
 { config, lib, ... }:
 let
   inherit (config.networking) hostName;
+  credentialNames = builtins.attrNames config.microvm.credentialFiles;
+  resolvedCredentialTransport = config.microvm.credentials.resolvedTransport;
+  hypervisorCredentialTransports = {
+    qemu = [ "qemu-fw_cfg" ];
+    cloud-hypervisor = [ "initrd-share" ];
+  };
+  supportedCredentialTransports =
+    hypervisorCredentialTransports.${config.microvm.hypervisor} or [];
+  validCredentialName = name:
+    builtins.match "^[A-Za-z0-9][A-Za-z0-9_.-]*$" name != null;
+  invalidCredentialNames =
+    builtins.filter (name: !validCredentialName name) credentialNames;
 
 in
 lib.mkIf config.microvm.guest.enable {
@@ -104,6 +116,34 @@ lib.mkIf config.microvm.guest.enable {
         );
       message = ''
         MicroVM ${hostName}: `config.microvm.forwardPorts` works only with qemu and one network interface with `type = "user"`
+      '';
+    } {
+      assertion = (config.microvm.credentialFiles == {}) -> resolvedCredentialTransport == null;
+      message = ''
+        MicroVM ${hostName}: `microvm.credentials.resolvedTransport` must be null when `microvm.credentialFiles` is empty.
+      '';
+    } {
+      assertion = (config.microvm.credentialFiles != {}) -> resolvedCredentialTransport != null;
+      message = ''
+        MicroVM ${hostName}: `microvm.credentialFiles` is configured but no credential transport could be resolved.
+      '';
+    } {
+      assertion = resolvedCredentialTransport == null || builtins.elem resolvedCredentialTransport supportedCredentialTransports;
+      message = ''
+        MicroVM ${hostName}: credential transport `${toString resolvedCredentialTransport}` is not supported for hypervisor `${config.microvm.hypervisor}`.
+        Supported transport(s): ${lib.concatStringsSep ", " supportedCredentialTransports}
+      '';
+    } {
+      assertion = resolvedCredentialTransport != "initrd-share" || config.boot.initrd.systemd.enable;
+      message = ''
+        MicroVM ${hostName}: credential transport `initrd-share` requires `boot.initrd.systemd.enable = true`
+        because credentials are imported from `/run/credentials/@initrd/` during initrd.
+      '';
+    } {
+      assertion = invalidCredentialNames == [];
+      message = ''
+        MicroVM ${hostName}: credential name(s) ${toString invalidCredentialNames} are invalid.
+        Allowed pattern: `^[A-Za-z0-9][A-Za-z0-9_.-]*$`.
       '';
     } ]
     ++

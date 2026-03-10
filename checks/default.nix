@@ -141,14 +141,18 @@ let
       modules = [ ({ config, pkgs, ... }: {
         # This is the guest vm config
         microvm = {
-          credentialFiles.SECRET_BOOTSTRAP_KEY = "/etc/microvm-bootstrap.secret";
-          testing.enableTest = builtins.elem config.microvm.hypervisor [
-            # Hypervisors that support systemd credentials
-            "qemu"
-          ];
+          credentialFiles.SECRET_BOOTSTRAP_KEY = pkgs.writeText "microvm-bootstrap.secret" "i am super secret";
+          virtiofsd.group = null;
+          testing.enableTest =
+            builtins.elem config.microvm.hypervisor [ "qemu" ]
+            || (
+              config.microvm.hypervisor == "cloud-hypervisor"
+              && config.boot.initrd.systemd.enable
+            );
         };
         # TODO: need to somehow have the test harness check for the success or failure of this service.
         systemd.services.test-secret-availability = {
+          wantedBy = [ "multi-user.target" ];
           serviceConfig = {
             ImportCredential = "SECRET_BOOTSTRAP_KEY";
             Restart = "no";

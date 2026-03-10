@@ -147,7 +147,11 @@ let
     then "console=ttyAMA0"
     else "";
 
-  systemdCredentialStrings = lib.mapAttrsToList (name: path: "name=opt/io.systemd.credentials/${name},file=${path}" ) credentialFiles;
+  fwCfgCredentialFiles =
+    if microvmConfig.credentials.resolvedTransport == "qemu-fw_cfg"
+    then credentialFiles
+    else {};
+  systemdCredentialStrings = lib.mapAttrsToList (name: path: "name=opt/io.systemd.credentials/${name},file=${path}" ) fwCfgCredentialFiles;
   fwCfgOptions = systemdCredentialStrings;
 
 in
